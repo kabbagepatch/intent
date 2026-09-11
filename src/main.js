@@ -1,10 +1,12 @@
+// const { load } = require("@tauri-apps/plugin-store");
+const { load } = window.__TAURI__.store;
+
 const { invoke } = window.__TAURI__.core;
 
 let greetInputEl;
 let greetMsgEl;
 
 async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
   greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
 }
 
@@ -92,10 +94,18 @@ const setTheme = (theme) => {
 
 setTheme(curTheme);
 
+const tauristore = load('store.json', { autoSave: false });
+
 const form = document.getElementById('form');
 form.addEventListener('submit', e => {
   e.preventDefault();
   const formData = new FormData(e.target);
   const formProps = Object.fromEntries(formData);
-  console.log(formProps);
+  tauristore.then(store => {
+    Object.keys(formProps).forEach(k => {
+      store.set(k, formProps[k]);
+    });
+    store.set('startTimestamp', Date.now());
+    store.save();
+  }).catch(console.error);
 });

@@ -1,5 +1,5 @@
 use tauri::Manager;
-use tauri_plugin_positioner::{WindowExt, Position};
+use tauri_plugin_positioner::{Position, WindowExt};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -9,8 +9,9 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-
-    tauri::Builder::default().setup(|app| {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .setup(|app| {
             let win = app.get_webview_window("main").unwrap();
             let _ = win.as_ref().window().move_window(Position::BottomRight);
             Ok(())
