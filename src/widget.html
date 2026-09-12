@@ -11,17 +11,21 @@
   <body>
     <main class="container" style=" padding: 0; ">
       <div id="stars"></div>
-      <div id="widget-container">
-        <div class="timer-container">
-          <svg class="timer-svg" viewBox="0 0 100 100">
-            <circle class="timer-bg" cx="50" cy="50" r="40" />
-            <circle class="timer-progress" id="progress-circle" cx="50" cy="50" r="40" />
-          </svg>
-          <div class="timer-text">
-            <span id="timer-hours">0</span>:<span id="timer-minutes">10</span>
+      <div class="widget-container">
+        <div class="widget-container-inner">
+          <div class="timer-container">
+            <svg class="timer-svg" viewBox="0 0 100 100">
+              <circle class="timer-bg" cx="50" cy="50" r="40" />
+              <circle class="timer-progress" id="progress-circle" cx="50" cy="50" r="40" />
+            </svg>
+            <div class="timer-inner">
+              <div id="timer-text"><span id="timer-hours">0</span>:<span id="timer-minutes">10</span></div>
+              <button class="icon-button" id="snooze-button"><img class="icon" src="/assets/snooze.svg" title="Snooze" /></button>
+            </div>
           </div>
+          <h1 id="widget-title"></h1>
         </div>
-        <h1 id="widget-title"></h1>
+        <button class="icon-button" id="back-button"><img class="icon" src="/assets/back.svg" title="Back" /></button>
       </div>
     </main>
   </body>

@@ -89,6 +89,20 @@ button {
   outline: none;
 }
 
+.icon-button {
+  background: none;
+  margin: 5px;
+  padding: 2px;
+  box-shadow: none;
+  width: 30px;
+  height: 30px;
+}
+
+.icon {
+  width: 25px;
+  height: 25px;
+}
+
 #form {
   display: flex;
   flex-direction: column;
@@ -126,10 +140,11 @@ button {
 	position: absolute;
 }
 
-#widget-container {
+.widget-container {
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   min-width: 200px;
   width: 100%;
   margin: 0 10px;
@@ -142,7 +157,12 @@ button {
     var(--color-background-2) 25%,
     var(--color-background-3) 70%
   );
-  cursor: pointer;
+}
+
+.widget-container-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 #widget-title {
@@ -165,7 +185,7 @@ button {
 
 circle {
   fill: none;
-  stroke-width: 4px;
+  stroke-width: 3px;
 }
 
 .timer-bg {
@@ -173,12 +193,12 @@ circle {
 }
 
 .timer-progress {
-  stroke: var(--color-background-1);
+  stroke: var(--color-text);
   stroke-linecap: round;
   transition: stroke-dashoffset 1s linear;
 }
 
-.timer-text {
+.timer-inner {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -187,4 +207,12 @@ circle {
   font-size: 0.95rem;
   font-weight: bold;
   color: var(--color-text);
+}
+
+#back-button {
+  margin-right: 12px;
+}
+
+#snooze-button {
+  display: none;
 }

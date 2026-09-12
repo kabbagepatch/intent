@@ -4,6 +4,25 @@ const tauriPositioner = window.__TAURI__.positioner;
 const { load } = window.__TAURI__.store;
 const tauriStore = await load('store.json', { autoSave: false });
 
+const { enable, isEnabled, disable } = window.__TAURI__.autostart;
+async function autostart() {
+  if (!await isEnabled()) {
+    await enable();
+  }
+}
+autostart();
+
+const { isPermissionGranted, requestPermission, sendNotification } = window.__TAURI__.notification;
+let permissionGranted = false;
+async function requestNotifications() {
+  permissionGranted = await isPermissionGranted();
+  if (!permissionGranted) {
+    const permission = await requestPermission();
+    permissionGranted = permission === 'granted';
+  }
+}
+requestNotifications()
+
 const tauriWindow = window.__TAURI__.window;
 const currentWindow = tauriWindow.getCurrentWindow();
 
@@ -60,13 +79,6 @@ const themes = {
     'color-button-text': 'hsl(0, 0%, 1%)',
   },
 }
-let curTheme = 'afternoon';
-const currentHour = new Date().getHours();
-if (currentHour < 5) curTheme = 'night';
-if (currentHour < 12) curTheme = 'morning';
-else if (currentHour < 18) curTheme = 'afternoon';
-else if (currentHour < 22) curTheme = 'evening';
-else curTheme = 'night';
 
 const stars = document.getElementById("stars");
 
@@ -81,8 +93,20 @@ function createStars() {
 	}
 }
 
-const setTheme = (theme) => {
+let curTheme = '';
+
+const setTheme = () => {
+  let theme = 'afternoon';
+  const currentHour = new Date().getHours();
+  if (currentHour < 5) theme = 'night';
+  if (currentHour < 12) theme = 'morning';
+  else if (currentHour < 18) theme = 'afternoon';
+  else if (currentHour < 21) theme = 'evening';
+  else theme = 'night';
+
   if (!Object.keys(themes).includes(theme)) return;
+  if (curTheme === theme) return;
+
   curTheme = theme;
   const vars = themes[theme];
   const root = document.documentElement;
@@ -106,7 +130,7 @@ const setTheme = (theme) => {
   }
 }
 
-setTheme(curTheme);
+setTheme();
 
 const setPresets = async(isWidget = false) => {
   const intent = await tauriStore.get('intent');
@@ -120,12 +144,26 @@ const setPresets = async(isWidget = false) => {
     document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
     document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
   } else {
+    if (intent) document.getElementById('intent-input').value = intent;
     if (remainingTime > 0) {
-      document.getElementById('intent-input').value = intent;
       document.getElementById('hours-input').value = h;
       document.getElementById('minutes-input').value = m;
     }
   }
+}
+
+const switchMode = async (mode='FORM', x=400, y=500) => {
+  if (mode === 'FORM') {
+    currentWindow.setDecorations(true);
+    currentWindow.setSize(new tauriWindow.LogicalSize(x, y));
+    await currentWindow.setShadow(true);
+  } else {
+    currentWindow.setDecorations(false);
+    currentWindow.setSize(new tauriWindow.LogicalSize(x, y));
+    await currentWindow.setShadow(false);
+  }
+
+  await reposition();
 }
 
 const form = document.getElementById('form');
@@ -136,57 +174,67 @@ if (form) {
     const formData = new FormData(e.target);
     const formProps = Object.fromEntries(formData);
     tauriStore.set('intent', formProps.intent);
-    tauriStore.set('endtime', Date.now() + ((formProps.hours * 3600 + formProps.minutes * 60) * 1000));
+    const timeAdded = ((formProps.hours * 3600 + formProps.minutes * 60) * 1000);
+    tauriStore.set('endtime', Date.now() + timeAdded);
     tauriStore.save();
 
-    currentWindow.setDecorations(false);
-    currentWindow.setSize(new tauriWindow.LogicalSize(300, 70));
-    await currentWindow.setShadow(false);
-    await reposition();
+    await switchMode('WIDGET', 300, 70);
     window.location.replace("widget.html");
   });
 }
 
 
 const switchToForm = async () => {
-  currentWindow.setDecorations(true);
-  currentWindow.setSize(new tauriWindow.LogicalSize(400, 500));
-  await currentWindow.setShadow(true);
-  await reposition();
+  await switchMode('FORM');
   window.location.replace("index.html");
 }
 
-const widgetContainer = document.getElementById('widget-container');
-if (widgetContainer) {
-  setPresets(true);
-  widgetContainer.addEventListener('click', switchToForm);
-
+const startTimer = (endTime) => {
   const progressCircle = document.getElementById('progress-circle');
   const radius = progressCircle.r.baseVal.value;
   const circumference = 2 * Math.PI * radius;
   progressCircle.style.strokeDasharray = circumference;
   progressCircle.style.strokeDashoffset = 0;
 
-  const endTime = await tauriStore.get('endtime');
   const totalRemainingTime = endTime - Date.now();
   let timeLeft = totalRemainingTime;
-  if (timeLeft > 0) {
-    const interval = setInterval(() => {
-      timeLeft = endTime - Date.now();
-      let h = Math.max(Math.floor(timeLeft / 3600000), 0);
-      let m = Math.max(Math.floor((timeLeft % 3600000) / 60000), 0);
-      let s = Math.max(Math.floor((timeLeft % 60000) / 1000), 0);
-      const timeFraction = timeLeft / totalRemainingTime;
-      const offset = circumference * (1 - timeFraction);
-      progressCircle.style.strokeDashoffset = offset;
-      document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
-      document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
-      if (h === 0 && m === 0 && s === 0) {
-        clearInterval(interval);
-        document.getElementById('timer-hours').textContent = '00';
-        document.getElementById('timer-minutes').textContent = '00';
-        progressCircle.style.strokeDashoffset = circumference
-      }
-    }, 1000);
-  }
+  if (timeLeft <= 0) return;
+
+  const interval = setInterval(async () => {
+    timeLeft = endTime - Date.now();
+    let h = Math.max(Math.floor(timeLeft / 3600000), 0);
+    let m = Math.max(Math.floor((timeLeft % 3600000) / 60000), 0);
+    let s = Math.max(Math.floor((timeLeft % 60000) / 1000), 0);
+    const timeFraction = timeLeft / totalRemainingTime;
+    const offset = circumference * (1 - timeFraction);
+    progressCircle.style.strokeDashoffset = offset;
+    document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
+    document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
+    if (h === 0 && m === 0 && s === 0) {
+      clearInterval(interval);
+      await new Audio('./assets/chime.mp3').play();
+      sendNotification({ title: 'Intent', body: 'Time\'s up! Nicely done. Take a break, look for things you might\'ve been ignoring. Snooze if more time needed' })
+      progressCircle.style.strokeDashoffset = circumference;
+      document.getElementById('snooze-button').style.display = 'block';
+      document.getElementById('timer-text').style.display = 'none';
+    }
+  }, 1000);
+}
+
+const snooze = () => {
+  document.getElementById('snooze-button').style.display = 'none';
+  document.getElementById('timer-text').style.display = 'block';
+  document.getElementById('timer-hours').textContent = String(0).padStart(2, '0');
+  document.getElementById('timer-minutes').textContent = String(5).padStart(2, '0');
+  startTimer(Date.now() + (5 * 60 * 1000));
+}
+
+const widgetContainer = document.getElementsByClassName('widget-container');
+if (widgetContainer.length) {
+  setPresets(true);
+  document.getElementById('back-button').addEventListener('click', switchToForm);
+  document.getElementById('snooze-button').addEventListener('click', snooze);
+
+  const endTime = await tauriStore.get('endtime');
+  startTimer(endTime);
 }

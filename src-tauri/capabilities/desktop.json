@@ -9,6 +9,8 @@
     "main"
   ],
   "permissions": [
-    "positioner:default"
+    "positioner:default",
+    "autostart:default",
+    "notification:default"
   ]
 }
