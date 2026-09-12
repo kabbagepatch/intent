@@ -13,7 +13,8 @@
         "title": "Intent",
         "width": 400,
         "height": 500,
-        "alwaysOnTop": true
+        "alwaysOnTop": true,
+        "transparent": true
       }
     ],
     "security": {

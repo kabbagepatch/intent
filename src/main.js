@@ -1,7 +1,23 @@
-// const { load } = require("@tauri-apps/plugin-store");
-const { load } = window.__TAURI__.store;
-
 const { invoke } = window.__TAURI__.core;
+const tauriPositioner = window.__TAURI__.positioner;
+
+const { load } = window.__TAURI__.store;
+const tauriStore = await load('store.json', { autoSave: false });
+
+const tauriWindow = window.__TAURI__.window;
+const currentWindow = tauriWindow.getCurrentWindow();
+
+async function reposition() {
+  const monitor = await tauriWindow.currentMonitor();
+  if (monitor) {
+    const workAreaSize = monitor.workArea.size;
+    const windowSize = await currentWindow.outerSize();
+    const x = workAreaSize.width - windowSize.width;
+    const y = workAreaSize.height - windowSize.height;
+    await currentWindow.setPosition(new tauriWindow.PhysicalPosition(x, y));
+  }
+}
+reposition();
 
 let greetInputEl;
 let greetMsgEl;
@@ -48,14 +64,13 @@ let curTheme = 'afternoon';
 const currentHour = new Date().getHours();
 if (currentHour < 5) curTheme = 'night';
 if (currentHour < 12) curTheme = 'morning';
-else if (currentHour < 16) curTheme = 'afternoon';
+else if (currentHour < 18) curTheme = 'afternoon';
 else if (currentHour < 22) curTheme = 'evening';
 else curTheme = 'night';
 
 const stars = document.getElementById("stars");
 
 function createStars() {
-  console.log('createStars', stars)
 	for (let i = 0; i < 50; i++) {
 		let x = Math.floor(Math.random() * 96 + 2);
 		let y = Math.floor(Math.random() * 80 + 1);
@@ -74,7 +89,6 @@ const setTheme = (theme) => {
 
   Object.entries(vars).forEach(([key, value]) => {
     if (value) {
-      console.log(key, value);
       root.style.setProperty(`--${key}`, value);
     }
   });
@@ -94,18 +108,85 @@ const setTheme = (theme) => {
 
 setTheme(curTheme);
 
-const tauristore = load('store.json', { autoSave: false });
+const setPresets = async(isWidget = false) => {
+  const intent = await tauriStore.get('intent');
+  const endTime = await tauriStore.get('endtime');
+  const remainingTime = endTime - Date.now();
+  
+  const h = Math.max(Math.floor(remainingTime / 3600000), 0);
+  const m = Math.max(Math.floor((remainingTime % 3600000) / 60000), 0);
+  if (isWidget) {
+    document.getElementById('widget-title').textContent = intent;
+    document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
+    document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
+  } else {
+    if (remainingTime > 0) {
+      document.getElementById('intent-input').value = intent;
+      document.getElementById('hours-input').value = h;
+      document.getElementById('minutes-input').value = m;
+    }
+  }
+}
 
 const form = document.getElementById('form');
-form.addEventListener('submit', e => {
-  e.preventDefault();
-  const formData = new FormData(e.target);
-  const formProps = Object.fromEntries(formData);
-  tauristore.then(store => {
-    Object.keys(formProps).forEach(k => {
-      store.set(k, formProps[k]);
-    });
-    store.set('startTimestamp', Date.now());
-    store.save();
-  }).catch(console.error);
-});
+if (form) {
+  setPresets();
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const formProps = Object.fromEntries(formData);
+    tauriStore.set('intent', formProps.intent);
+    tauriStore.set('endtime', Date.now() + ((formProps.hours * 3600 + formProps.minutes * 60) * 1000));
+    tauriStore.save();
+
+    currentWindow.setDecorations(false);
+    currentWindow.setSize(new tauriWindow.LogicalSize(300, 70));
+    await currentWindow.setShadow(false);
+    await reposition();
+    window.location.replace("widget.html");
+  });
+}
+
+
+const switchToForm = async () => {
+  currentWindow.setDecorations(true);
+  currentWindow.setSize(new tauriWindow.LogicalSize(400, 500));
+  await currentWindow.setShadow(true);
+  await reposition();
+  window.location.replace("index.html");
+}
+
+const widgetContainer = document.getElementById('widget-container');
+if (widgetContainer) {
+  setPresets(true);
+  widgetContainer.addEventListener('click', switchToForm);
+
+  const progressCircle = document.getElementById('progress-circle');
+  const radius = progressCircle.r.baseVal.value;
+  const circumference = 2 * Math.PI * radius;
+  progressCircle.style.strokeDasharray = circumference;
+  progressCircle.style.strokeDashoffset = 0;
+
+  const endTime = await tauriStore.get('endtime');
+  const totalRemainingTime = endTime - Date.now();
+  let timeLeft = totalRemainingTime;
+  if (timeLeft > 0) {
+    const interval = setInterval(() => {
+      timeLeft = endTime - Date.now();
+      let h = Math.max(Math.floor(timeLeft / 3600000), 0);
+      let m = Math.max(Math.floor((timeLeft % 3600000) / 60000), 0);
+      let s = Math.max(Math.floor((timeLeft % 60000) / 1000), 0);
+      const timeFraction = timeLeft / totalRemainingTime;
+      const offset = circumference * (1 - timeFraction);
+      progressCircle.style.strokeDashoffset = offset;
+      document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
+      document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
+      if (h === 0 && m === 0 && s === 0) {
+        clearInterval(interval);
+        document.getElementById('timer-hours').textContent = '00';
+        document.getElementById('timer-minutes').textContent = '00';
+        progressCircle.style.strokeDashoffset = circumference
+      }
+    }, 1000);
+  }
+}
