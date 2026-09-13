@@ -8,3 +8,13 @@ Now, the internet has become a constant presence, and turning my PC on is the de
 This app aims to bring back a bit more _intention_ to your screen time by simply asking what you plan to do, rather than aimlessly bounce between tabs. Enjoy and don't forget to take breaks!
 
 Built using Tauri and vanilla HTML and JavaScript
+
+<img width="402" height="532" alt="image" src="https://github.com/user-attachments/assets/66556d99-e411-4893-9a95-c8aabb288e39" />
+
+<img width="402" height="532" alt="image" src="https://github.com/user-attachments/assets/0f70e515-eaf9-43a8-a0d2-10bc95dd70a3" />
+
+<img width="402" height="532" alt="image" src="https://github.com/user-attachments/assets/4c0ddf94-b0ad-48b0-a295-6207d76696d7" />
+
+<img width="402" height="532" alt="image" src="https://github.com/user-attachments/assets/5d312688-d4f6-4ab2-91f4-68602cc7079a" />
+
+<img width="316" height="79" alt="image" src="https://github.com/user-attachments/assets/07609bfe-a8c2-41ba-893d-698e1cd25e64" />
