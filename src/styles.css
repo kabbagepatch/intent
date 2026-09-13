@@ -12,12 +12,15 @@
   -webkit-text-size-adjust: 100%;
 
   --color-button: #0f0f0f98;
+  --color-icon-button: #0f0f0f98;
   --color-text: #f6f6f6;
+  --color-shadow: #0f0f0f98;
   --color-background-1: rgba(205, 237, 246, 1);
   --color-background-2: rgba(36, 123, 160, 1);
   --color-background-3: rgba(36, 123, 160, 1);
 
   color: var(--color-text);
+  text-shadow: 1px 1px 2px var(--color-shadow);
   background: linear-gradient(
     0deg,
     var(--color-background-1) 0%,
@@ -96,6 +99,7 @@ button {
   box-shadow: none;
   width: 30px;
   height: 30px;
+  box-shadow: 0.05em 0.1em var(--color-shadow);
 }
 
 .icon {
@@ -112,7 +116,7 @@ button {
   max-width: 300px;
 }
 
-#intent-label, #time-label, #submit-button {
+#intention-label, #time-label, #submit-button {
   margin-top: 10px;
   margin-bottom: 0;
 }
@@ -215,6 +219,11 @@ circle {
 
 #snooze-button {
   display: none;
+  box-shadow: none;
+}
+
+#snooze-icon {
+  fill: var(--color-text) !important;
 }
 
 .bottom-buttons {
@@ -233,7 +242,7 @@ circle {
 }
 
 #about-button {
-  margin-left: 0;
+  margin-left: 2px;
 }
 
 #settings, #about {
@@ -257,6 +266,8 @@ circle {
 input.radio {
   margin: 0;
   margin-left: 10px;
+  background: none;
+  box-shadow: none;
 }
 
 #snooze-time {
@@ -272,7 +283,8 @@ input.radio {
 #about p {
   text-align: left;
   padding: 0 10px;
-  margin-bottom: 2px;
+  margin-top: 10px;
+  margin-bottom: 0px;
 }
 
 #about p a {

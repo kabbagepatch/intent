@@ -19,7 +19,7 @@ reposition();
 /* Tray Icon Setup */
 const { TrayIcon } = window.__TAURI__.tray;
 const { Menu, MenuItem } = window.__TAURI__.menu;
-const TRAY_ID = 'intent-app-tray';
+const TRAY_ID = 'intention-app-tray';
 async function toggleAppVisibility() {
   const isVisible = await currentWindow.isVisible();
   if (isVisible) {
@@ -40,7 +40,7 @@ async function setupTray() {
     id: TRAY_ID,
     icon: await defaultWindowIcon(),
     menu,
-    tooltip: 'Toggle Intent App',
+    tooltip: 'Toggle Intention App',
     menuOnLeftClick: false,
     action: async (event) => {
       if (event.type === 'Click' && event.button === 'Left') {
@@ -101,6 +101,8 @@ const themes = {
     'color-background-2': 'hsl(27, 71%, 73%)',
     'color-background-3': 'hsl(48, 100%, 87%)',
     'color-text': 'hsl(0, 0%, 9%)',
+    'color-shadow': 'hsl(48, 100%, 87%)',
+    'color-icon-button': 'hsl(0, 0%, 9%)',
     'color-button': 'hsl(48, 100%, 87%)',
     'color-button-text': 'hsl(0, 0%, 1%)',
   },
@@ -109,6 +111,7 @@ const themes = {
     'color-background-2': 'hsl(193, 65%, 78%)',
     'color-background-3': 'hsl(198, 83%, 38%)',
     'color-text': 'hsl(0, 0%, 96%)',
+    'color-icon-button': 'hsl(198, 83%, 38%)',
     'color-button': 'hsl(193, 69%, 88%)',
     'color-button-text': 'hsl(0, 0%, 1%)',
   },
@@ -117,6 +120,7 @@ const themes = {
     'color-background-2': 'hsl(339, 60%, 46%)',
     'color-background-3': 'hsl(246, 100%, 18%)',
     'color-text': 'hsl(0, 0%, 96%)',
+    'color-icon-button': 'hsl(246, 100%, 18%)',
     'color-button': 'hsl(246, 100%, 18%)',
     'color-button-text': 'hsl(0, 0%, 96%)',
   },
@@ -125,6 +129,7 @@ const themes = {
     'color-background-2': 'hsl(246, 100%, 10%)',
     'color-background-3': 'hsl(246, 100%, 18%)',
     'color-text': 'hsl(42, 24%, 89%)',
+    'color-icon-button': 'hsl(42, 24%, 89%)',
     'color-button': 'hsl(42, 24%, 89%)',
     'color-button-text': 'hsl(0, 0%, 1%)',
   },
@@ -175,7 +180,7 @@ const setTheme = () => {
   const aboutSvg = document.getElementById('about-icon');
   [settingsSvg, backSvg, snoozeSvg, aboutSvg].forEach((icon) => {
     if (icon) {
-      icon.style.fill = vars['color-text'];
+      icon.style.fill = vars['color-icon-button'];
     }
   })
 
@@ -196,19 +201,19 @@ setupTray();
 
 /* Form Preset */
 const setPresets = async(isWidget = false) => {
-  const intent = storeMap.intent;
+  const intention = storeMap.intention;
   const endTime = storeMap.endtime;
   const remainingTime = endTime - Date.now();
   
   const h = Math.max(Math.floor(remainingTime / 3600000), 0);
   const m = Math.max(Math.floor((remainingTime % 3600000) / 60000), 0);
   if (isWidget) {
-    document.getElementById('widget-title').textContent = intent;
+    document.getElementById('widget-title').textContent = intention;
     document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
     document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
   } else {
     if (remainingTime > 0) {
-      if (intent) document.getElementById('intent-input').value = intent;
+      if (intention) document.getElementById('intention-input').value = intention;
       document.getElementById('hours-input').value = h;
       document.getElementById('minutes-input').value = m;
     }
@@ -236,7 +241,7 @@ if (form) {
     e.preventDefault();
     const formData = new FormData(e.target);
     const formProps = Object.fromEntries(formData);
-    tauriStore.set('intent', formProps.intent);
+    tauriStore.set('intention', formProps.intention);
     const timeAdded = ((formProps.hours * 3600 + formProps.minutes * 60) * 1000);
     tauriStore.set('endtime', Date.now() + timeAdded);
     tauriStore.save();
@@ -283,7 +288,7 @@ const startTimer = async (endTime) => {
       clearInterval(interval);
       if (audioEnabled) await new Audio('./assets/chime.mp3').play();
       if (notifEnabled) tauriNotification.sendNotification({
-        title: 'Intent',
+        title: 'Intention',
         body: 'Time\'s up! Nicely done. Take a break, look for things you might\'ve been ignoring. Snooze if more time needed'
       })
       if (!widgetEnabled) await currentWindow.show()

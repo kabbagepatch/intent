@@ -1,7 +1,10 @@
-# Tauri + Vanilla
+Intention
+=====
 
-This template should help get you started developing with Tauri in vanilla HTML, CSS and Javascript.
+Growing up, whenever I wanted to use a computer, I'd have to go to the _computer room_, with a specific purpose in mind, even if it was just to get on Facebook to chat with friends or watch a YouTube video.
 
-## Recommended IDE Setup
+Now, the internet has become a constant presence, and turning my PC on is the default first thing I do every morning.
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+This app aims to bring back a bit more _intention_ to your screen time by simply asking what you plan to do, rather than aimlessly bounce between tabs. Enjoy and don't forget to take breaks!
+
+Built using Tauri and vanilla HTML and JavaScript

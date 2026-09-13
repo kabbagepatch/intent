@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "intent",
+  "productName": "intention",
   "version": "0.1.0",
-  "identifier": "com.kavish.intent",
+  "identifier": "com.kavish.intention",
   "build": {
     "frontendDist": "../src"
   },
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Intent",
+        "title": "Intention",
         "width": 400,
         "height": 500,
         "alwaysOnTop": true,
