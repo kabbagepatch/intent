@@ -1,6 +1,7 @@
 const { invoke } = window.__TAURI__.core;
-const tauriPositioner = window.__TAURI__.positioner;
+const { defaultWindowIcon } = window.__TAURI__.app;
 
+/* Window Repositioning to Corner */
 const tauriWindow = window.__TAURI__.window;
 const currentWindow = tauriWindow.getCurrentWindow();
 async function reposition() {
@@ -15,6 +16,43 @@ async function reposition() {
 }
 reposition();
 
+/* Tray Icon Setup */
+const { TrayIcon } = window.__TAURI__.tray;
+const { Menu, MenuItem } = window.__TAURI__.menu;
+const TRAY_ID = 'intent-app-tray';
+async function toggleAppVisibility() {
+  const isVisible = await currentWindow.isVisible();
+  if (isVisible) {
+    await currentWindow.hide();
+  } else {
+    await currentWindow.show();
+    await currentWindow.unminimize();
+    await currentWindow.setFocus();
+  }
+}
+async function setupTray() {
+  try { await TrayIcon.removeById(TRAY_ID); } catch(e){}
+  const toggleItem = await MenuItem.new({ id: 'toggle', text: 'Show/Hide App', action: toggleAppVisibility });
+  const quitItem = await MenuItem.new({ id: 'quit', text: 'Quit', action: currentWindow.close });
+  const menu = await Menu.new({ items: [toggleItem, quitItem] });
+
+  const trayOptions = {
+    id: TRAY_ID,
+    icon: await defaultWindowIcon(),
+    menu,
+    tooltip: 'Toggle Intent App',
+    menuOnLeftClick: false,
+    action: async (event) => {
+      if (event.type === 'Click' && event.button === 'Left') {
+        await toggleAppVisibility()
+      }
+    }
+  };
+
+  await TrayIcon.new(trayOptions);
+}
+
+/* Notification Request */
 const tauriNotification = window.__TAURI__.notification;
 let notifPermissionGranted = false;
 async function requestNotifications() {
@@ -25,6 +63,7 @@ async function requestNotifications() {
   }
 }
 
+/* Tauri Store Load */
 const { load } = window.__TAURI__.store;
 const tauriStore = await load('store.json', { autoSave: false });
 const storeMap = {};
@@ -44,6 +83,7 @@ const populateStoreMap = async () => {
   tauriStore.save();
 }
 
+/* App Autostart settings */
 const tauriAutostart = window.__TAURI__.autostart;
 async function toggleAutostart(enable) {
   if (enable && !await tauriAutostart.isEnabled()) {
@@ -54,6 +94,7 @@ async function toggleAutostart(enable) {
   }
 }
 
+/* Theme Setup */
 const themes = {
   'morning': {
     'color-background-1': 'hsl(193, 69%, 88%)',
@@ -90,7 +131,6 @@ const themes = {
 }
 
 const stars = document.getElementById("stars");
-
 function createStars() {
 	for (let i = 0; i < 50; i++) {
 		let x = Math.floor(Math.random() * 96 + 2);
@@ -103,7 +143,6 @@ function createStars() {
 }
 
 let curTheme = '';
-
 const setTheme = () => {
   let theme = 'afternoon';
   const currentHour = new Date().getHours();
@@ -153,7 +192,9 @@ setTheme();
 await populateStoreMap();
 toggleAutostart(storeMap['autostart_setting'] === 'enable');
 requestNotifications();
+setupTray();
 
+/* Form Preset */
 const setPresets = async(isWidget = false) => {
   const intent = storeMap.intent;
   const endTime = storeMap.endtime;
@@ -202,9 +243,12 @@ if (form) {
 
     await switchMode('WIDGET', 300, 70);
     window.location.replace("widget.html");
+
+    if (storeMap['widget_setting'] !== 'enable') {
+      await currentWindow.hide()
+    }
   });
 }
-
 
 const switchToForm = async () => {
   await switchMode('FORM');
@@ -214,6 +258,7 @@ const switchToForm = async () => {
 const startTimer = async (endTime) => {
   const audioEnabled = storeMap['audio_setting'] === 'enable';
   const notifEnabled = storeMap['notif_setting'] === 'enable';
+  const widgetEnabled = storeMap['widget_setting'] === 'enable';
   const progressCircle = document.getElementById('progress-circle');
   const radius = progressCircle.r.baseVal.value;
   const circumference = 2 * Math.PI * radius;
@@ -241,6 +286,7 @@ const startTimer = async (endTime) => {
         title: 'Intent',
         body: 'Time\'s up! Nicely done. Take a break, look for things you might\'ve been ignoring. Snooze if more time needed'
       })
+      if (!widgetEnabled) await currentWindow.show()
       progressCircle.style.strokeDashoffset = circumference;
       document.getElementById('snooze-button').style.display = 'block';
       document.getElementById('timer-text').style.display = 'none';
@@ -255,6 +301,9 @@ const snooze = () => {
   document.getElementById('timer-hours').textContent = String(0).padStart(2, '0');
   document.getElementById('timer-minutes').textContent = String(snoozeTime).padStart(2, '0');
   startTimer(Date.now() + (snoozeTime * 60 * 1000));
+  if (storeMap['widget_setting'] !== 'enable') {
+    currentWindow.hide()
+  }
 }
 
 const widgetContainer = document.getElementsByClassName('widget-container');
@@ -295,7 +344,6 @@ const setInitialSettings = async () => {
 
     if (!key.includes('setting')) return;
     key = key.split('_')[0];
-    console.log(key, value);
     document.getElementById(`${key}_enable`).checked = value === 'enable';
     document.getElementById(`${key}_disable`).checked = value !== 'enable';
   })
@@ -308,7 +356,6 @@ if (settings) {
   const radioButtons = document.querySelectorAll('input[type="radio"]');
   radioButtons.forEach(radio => {
     radio.addEventListener('change', async (event) => {
-      console.log(`${event.target.name}: ${event.target.value}`);
       const settingKey = `${event.target.name}_setting`;
       const settingValue = event.target.value;
       tauriStore.set(settingKey, settingValue);
