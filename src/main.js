@@ -133,7 +133,8 @@ const setTheme = () => {
   const settingsSvg = document.getElementById('settings-icon');
   const backSvg = document.getElementById('back-icon');
   const snoozeSvg = document.getElementById('snooze-icon');
-  [settingsSvg, backSvg, snoozeSvg].forEach((icon) => {
+  const aboutSvg = document.getElementById('about-icon');
+  [settingsSvg, backSvg, snoozeSvg, aboutSvg].forEach((icon) => {
     if (icon) {
       icon.style.fill = vars['color-text'];
     }
@@ -268,6 +269,13 @@ if (widgetContainer.length) {
 const backButton = document.getElementById('back-button');
 if (backButton) {
   backButton.addEventListener('click', switchToForm);
+}
+
+const aboutButton = document.getElementById('about-button');
+if (aboutButton) {
+  aboutButton.addEventListener('click', () => {
+    window.location.replace("about.html");
+  });
 }
 
 const settingsButton = document.getElementById('settings-button');

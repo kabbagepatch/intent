@@ -217,16 +217,26 @@ circle {
   display: none;
 }
 
-#settings-button, .back-button {
+.bottom-buttons {
   position: absolute;
   bottom: 0;
   left: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.bottom-buttons button {
   padding: 4px;
   width: 35px;
   height: 35px;
+  margin-right: 0;
 }
 
-#settings {
+#about-button {
+  margin-left: 0;
+}
+
+#settings, #about {
   padding-top: 2vh;
 }
 
@@ -253,4 +263,18 @@ input.radio {
   margin-left: 10px;
   width: 30px;
   padding: 0.4em;
+}
+
+#about h1 {
+  margin-bottom: 10px;
+}
+
+#about p {
+  text-align: left;
+  padding: 0 10px;
+  margin-bottom: 2px;
+}
+
+#about p a {
+  color: var(--color-button)
 }

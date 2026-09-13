@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tauri App</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <main class="container" id="about">
+      <h1>About</h1>
+      <p>
+        Growing up, whenever I wanted to use a computer, I'd have to go to the <i>computer room</i>,
+        with a specific purpose in mind, even if it was just to get on Facebook to chat with friends or watch a YouTube video.
+      </p>
+      <p>
+        Now, the internet has become a constant presence, and turning my PC on is the default first thing I do every morning.
+      </p>
+      <p>
+        This app aims to bring back a bit more <i>intention</i> to my screen time by simply asking what you plan to do, rather than
+        aimlessly bounce between tabs. Enjoy and don't forget to take breaks!
+      </p>
+      <p>
+        - Kavish (<a href="https://github.com/kabbagepatch">Github</a>)
+      </p>
+      <div id="stars" style="opacity: 0.4;"></div>
+      <button class="icon-button bottom-buttons" id="back-button">
+        <svg id="back-icon" viewBox="0 0 1024 1024" fill="#000000">
+          <path
+            d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
+          />
+          <path
+            d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
+          />
+        </svg>
+      </button>
+    </main>
+  </body>
+</html>
