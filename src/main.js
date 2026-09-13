@@ -1,31 +1,8 @@
 const { invoke } = window.__TAURI__.core;
 const tauriPositioner = window.__TAURI__.positioner;
 
-const { load } = window.__TAURI__.store;
-const tauriStore = await load('store.json', { autoSave: false });
-
-const { enable, isEnabled, disable } = window.__TAURI__.autostart;
-async function autostart() {
-  if (!await isEnabled()) {
-    await enable();
-  }
-}
-autostart();
-
-const { isPermissionGranted, requestPermission, sendNotification } = window.__TAURI__.notification;
-let permissionGranted = false;
-async function requestNotifications() {
-  permissionGranted = await isPermissionGranted();
-  if (!permissionGranted) {
-    const permission = await requestPermission();
-    permissionGranted = permission === 'granted';
-  }
-}
-requestNotifications()
-
 const tauriWindow = window.__TAURI__.window;
 const currentWindow = tauriWindow.getCurrentWindow();
-
 async function reposition() {
   const monitor = await tauriWindow.currentMonitor();
   if (monitor) {
@@ -38,11 +15,43 @@ async function reposition() {
 }
 reposition();
 
-let greetInputEl;
-let greetMsgEl;
+const tauriNotification = window.__TAURI__.notification;
+let notifPermissionGranted = false;
+async function requestNotifications() {
+  notifPermissionGranted = await tauriNotification.isPermissionGranted();
+  if (!notifPermissionGranted) {
+    const permission = await tauriNotification.requestPermission();
+    notifPermissionGranted = permission === 'granted';
+  }
+}
 
-async function greet() {
-  greetMsgEl.textContent = await invoke("greet", { name: greetInputEl.value });
+const { load } = window.__TAURI__.store;
+const tauriStore = await load('store.json', { autoSave: false });
+const storeMap = {};
+const populateStoreMap = async () => {
+  const storeEntries = (await tauriStore.entries());
+  storeEntries.forEach(entry => { storeMap[entry[0]] = entry[1] });
+  ['widget', 'audio', 'notif', 'autostart'].forEach(s => {
+    if (!storeMap[`${s}_setting`]) {
+      storeMap[`${s}_setting`] = 'enable';
+      tauriStore.set(`${s}_setting`, 'enable');
+    }
+  });
+  if (!storeMap.snooze_duration) {
+    storeMap['snooze_duration'] = 5;
+    tauriStore.set('snooze_duration', 5);
+  }
+  tauriStore.save();
+}
+
+const tauriAutostart = window.__TAURI__.autostart;
+async function toggleAutostart(enable) {
+  if (enable && !await tauriAutostart.isEnabled()) {
+    await tauriAutostart.enable();
+  }
+  if (!enable && await tauriAutostart.isEnabled()) {
+    await tauriAutostart.disable();
+  }
 }
 
 const themes = {
@@ -99,7 +108,7 @@ const setTheme = () => {
   let theme = 'afternoon';
   const currentHour = new Date().getHours();
   if (currentHour < 5) theme = 'night';
-  if (currentHour < 12) theme = 'morning';
+  else if (currentHour < 12) theme = 'morning';
   else if (currentHour < 18) theme = 'afternoon';
   else if (currentHour < 21) theme = 'evening';
   else theme = 'night';
@@ -117,9 +126,18 @@ const setTheme = () => {
     }
   });
 
-  if (theme === 'night') {
+  if (theme === 'night' && stars) {
     createStars();
   }
+
+  const settingsSvg = document.getElementById('settings-icon');
+  const backSvg = document.getElementById('back-icon');
+  const snoozeSvg = document.getElementById('snooze-icon');
+  [settingsSvg, backSvg, snoozeSvg].forEach((icon) => {
+    if (icon) {
+      icon.style.fill = vars['color-text'];
+    }
+  })
 
   const title = document.getElementById('greeting')
   if (title) {
@@ -131,10 +149,13 @@ const setTheme = () => {
 }
 
 setTheme();
+await populateStoreMap();
+toggleAutostart(storeMap['autostart_setting'] === 'enable');
+requestNotifications();
 
 const setPresets = async(isWidget = false) => {
-  const intent = await tauriStore.get('intent');
-  const endTime = await tauriStore.get('endtime');
+  const intent = storeMap.intent;
+  const endTime = storeMap.endtime;
   const remainingTime = endTime - Date.now();
   
   const h = Math.max(Math.floor(remainingTime / 3600000), 0);
@@ -144,8 +165,8 @@ const setPresets = async(isWidget = false) => {
     document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
     document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
   } else {
-    if (intent) document.getElementById('intent-input').value = intent;
     if (remainingTime > 0) {
+      if (intent) document.getElementById('intent-input').value = intent;
       document.getElementById('hours-input').value = h;
       document.getElementById('minutes-input').value = m;
     }
@@ -189,7 +210,9 @@ const switchToForm = async () => {
   window.location.replace("index.html");
 }
 
-const startTimer = (endTime) => {
+const startTimer = async (endTime) => {
+  const audioEnabled = storeMap['audio_setting'] === 'enable';
+  const notifEnabled = storeMap['notif_setting'] === 'enable';
   const progressCircle = document.getElementById('progress-circle');
   const radius = progressCircle.r.baseVal.value;
   const circumference = 2 * Math.PI * radius;
@@ -212,8 +235,11 @@ const startTimer = (endTime) => {
     document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
     if (h === 0 && m === 0 && s === 0) {
       clearInterval(interval);
-      await new Audio('./assets/chime.mp3').play();
-      sendNotification({ title: 'Intent', body: 'Time\'s up! Nicely done. Take a break, look for things you might\'ve been ignoring. Snooze if more time needed' })
+      if (audioEnabled) await new Audio('./assets/chime.mp3').play();
+      if (notifEnabled) tauriNotification.sendNotification({
+        title: 'Intent',
+        body: 'Time\'s up! Nicely done. Take a break, look for things you might\'ve been ignoring. Snooze if more time needed'
+      })
       progressCircle.style.strokeDashoffset = circumference;
       document.getElementById('snooze-button').style.display = 'block';
       document.getElementById('timer-text').style.display = 'none';
@@ -222,19 +248,74 @@ const startTimer = (endTime) => {
 }
 
 const snooze = () => {
+  const snoozeTime = storeMap['snooze_duration'];
   document.getElementById('snooze-button').style.display = 'none';
   document.getElementById('timer-text').style.display = 'block';
   document.getElementById('timer-hours').textContent = String(0).padStart(2, '0');
-  document.getElementById('timer-minutes').textContent = String(5).padStart(2, '0');
-  startTimer(Date.now() + (5 * 60 * 1000));
+  document.getElementById('timer-minutes').textContent = String(snoozeTime).padStart(2, '0');
+  startTimer(Date.now() + (snoozeTime * 60 * 1000));
 }
 
 const widgetContainer = document.getElementsByClassName('widget-container');
 if (widgetContainer.length) {
   setPresets(true);
-  document.getElementById('back-button').addEventListener('click', switchToForm);
   document.getElementById('snooze-button').addEventListener('click', snooze);
 
   const endTime = await tauriStore.get('endtime');
   startTimer(endTime);
+}
+
+const backButton = document.getElementById('back-button');
+if (backButton) {
+  backButton.addEventListener('click', switchToForm);
+}
+
+const settingsButton = document.getElementById('settings-button');
+if (settingsButton) {
+  settingsButton.addEventListener('click', () => {
+    window.location.replace("settings.html");
+  });
+}
+
+const setInitialSettings = async () => {
+  document.getElementById('widget_enable').checked = true;
+  document.getElementById('autostart_disable').checked = true;
+  document.getElementById('audio_disable').checked = true;
+
+  Object.keys(storeMap).forEach(key => {
+    const value = storeMap[key];
+
+    if (!key.includes('setting')) return;
+    key = key.split('_')[0];
+    console.log(key, value);
+    document.getElementById(`${key}_enable`).checked = value === 'enable';
+    document.getElementById(`${key}_disable`).checked = value !== 'enable';
+  })
+}
+
+const settings = document.getElementById('settings');
+if (settings) {
+  setInitialSettings();
+
+  const radioButtons = document.querySelectorAll('input[type="radio"]');
+  radioButtons.forEach(radio => {
+    radio.addEventListener('change', async (event) => {
+      console.log(`${event.target.name}: ${event.target.value}`);
+      const settingKey = `${event.target.name}_setting`;
+      const settingValue = event.target.value;
+      tauriStore.set(settingKey, settingValue);
+      tauriStore.save();
+
+      if (event.target.name === 'autostart') toggleAutostart(settingValue === 'enable');
+    });
+  });
+
+  const snoozeInput = document.getElementById('snooze-time');
+  snoozeInput.value = storeMap['snooze_duration'];
+  snoozeInput.addEventListener('input', async (event) => {
+    const snoozeValue = parseInt(event.target.value, 10);
+    storeMap['snooze_duration'] = snoozeValue;
+    tauriStore.set('snooze_duration', snoozeValue);
+    tauriStore.save();
+  })
 }

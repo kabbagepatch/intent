@@ -1,7 +1,6 @@
 use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 use tauri_plugin_positioner::{Position, WindowExt};
-use tauri_plugin_store::StoreExt;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -22,8 +21,6 @@ pub fn run() {
                     tauri_plugin_positioner::on_tray_event(app.app_handle(), &event);
                 })
                 .build(app)?;
-            let store = app.store("store.json")?;
-            store.clear();
             Ok(())
         })
         .plugin(tauri_plugin_store::Builder::new().build())

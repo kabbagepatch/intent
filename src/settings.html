@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tauri App</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <main class="container" id="settings">
+      <h1>Settings</h1>
+      <div class="settings-options">
+        <div class="settings-option">
+          <p>Select timer mode</p>
+          <input class="radio" type="radio" name="widget" id="widget_enable" value="enable">
+          <label for="html">Widget</label>
+          <input disabled class="radio" type="radio" name="widget" id="widget_disable" value="disable">
+          <label for="css">Tray</label>
+        </div>
+        <div class="settings-option">
+          <p>Play chime</p>
+          <input class="radio" type="radio" name="audio" id="audio_enable" value="enable">
+          <label for="html">Yes</label>
+          <input class="radio" type="radio" name="audio" id="audio_disable" value="disable">
+          <label for="css">No</label>
+        </div>
+        <div class="settings-option">
+          <p>Notifications</p>
+          <input class="radio" type="radio" name="notif" id="notif_enable" value="enable">
+          <label for="html">Enabled</label>
+          <input class="radio" type="radio" name="notif" id="notif_disable" value="disable">
+          <label for="css">Disabled</label>
+        </div>
+        <div class="settings-option">
+          <p>Launch app on startup</p>
+          <input class="radio" type="radio" name="autostart" id="autostart_enable" value="enable">
+          <label for="html">Enabled</label>
+          <input class="radio" type="radio" name="autostart" id="autostart_disable" value="disable">
+          <label for="css">Disabled</label>
+        </div>
+        <div class="settings-option">
+          <label>Snooze Duration</label>
+          <input type="number" id="snooze-time" value="5" placeholder="5" />
+        </div>
+      </div>
+      <div id="stars" style="opacity: 0.4;"></div>
+      <button class="icon-button back-button" id="back-button">
+        <svg id="back-icon" viewBox="0 0 1024 1024" fill="#000000">
+          <path
+            d="M224 480h640a32 32 0 1 1 0 64H224a32 32 0 0 1 0-64z"
+          />
+          <path
+            d="m237.248 512 265.408 265.344a32 32 0 0 1-45.312 45.312l-288-288a32 32 0 0 1 0-45.312l288-288a32 32 0 1 1 45.312 45.312L237.248 512z"
+          />
+        </svg>
+      </button>
+    </main>
+  </body>
+</html>
