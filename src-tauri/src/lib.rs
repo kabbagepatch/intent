@@ -1,4 +1,3 @@
-use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 use tauri_plugin_positioner::{Position, WindowExt};
 
@@ -16,11 +15,6 @@ pub fn run() {
         .setup(|app| {
             let win = app.get_webview_window("main").unwrap();
             let _ = win.as_ref().window().move_window(Position::BottomRight);
-            TrayIconBuilder::new()
-                .on_tray_icon_event(|app, event| {
-                    tauri_plugin_positioner::on_tray_event(app.app_handle(), &event);
-                })
-                .build(app)?;
             Ok(())
         })
         .plugin(tauri_plugin_store::Builder::new().build())
