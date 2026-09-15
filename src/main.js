@@ -7,13 +7,14 @@ const currentWindow = tauriWindow.getCurrentWindow();
 async function reposition() {
   const monitors = await tauriWindow.availableMonitors();
   let monitor = monitors[0];
-  if (!monitor) monitor = await tauriWindow.currentMonitor();
+  const currentMonitor = await tauriWindow.currentMonitor();
+  if (!monitor) monitor = currentMonitor;
   if (monitor) {
     const workAreaPosition = monitor.workArea.position;
     const workAreaSize = monitor.workArea.size;
     const windowSize = await currentWindow.outerSize();
-    const x = workAreaPosition.x + workAreaSize.width - windowSize.width;
-    const y = workAreaPosition.y + workAreaSize.height - windowSize.height;
+    const x = workAreaPosition.x + workAreaSize.width - Math.floor(windowSize.width * monitor.scaleFactor / currentMonitor.scaleFactor);
+    const y = workAreaPosition.y + workAreaSize.height - Math.floor(windowSize.height * monitor.scaleFactor / currentMonitor.scaleFactor);
     await currentWindow.setPosition(new tauriWindow.PhysicalPosition(x, y));
   }
 }
@@ -217,9 +218,7 @@ const switchMode = async (mode='FORM', x=400, y=500) => {
 const removeIntentRow = (i) => {
   document.getElementById(`intent-${i}`).remove();
   const mapIndex = storeMap.intents.findIndex(intent => intent.index === i);
-  console.log('before', storeMap.intents);
   storeMap.intents.splice(mapIndex, 1);
-  console.log('after', storeMap.intents);
   tauriStore.set('intents', storeMap.intents);
   tauriStore.save();
 
@@ -232,7 +231,6 @@ const addIntent = (data) => {
   const index = storeMap.intentIndex;
   storeMap.intents.push({ index, ...data });
   storeMap.intentIndex += 1;
-  console.log(storeMap.intents);
   tauriStore.set('intents', storeMap.intents);
   tauriStore.set('intentIndex', storeMap.intentIndex);
   tauriStore.save();
@@ -256,7 +254,6 @@ const addIntentRow = (data) => {
   containerDiv.appendChild(intentDiv);
   containerDiv.appendChild(timeDiv);
   containerDiv.onclick = () => {
-    console.log('remove', index);
     removeIntentRow(index)
   }
   
@@ -400,7 +397,6 @@ const snooze = (e) => {
 const next = async (e) => {
   e.stopPropagation();
   currentIntentInd += 1;
-  console.log(storeMap.intents.length, currentIntentInd);
   if (storeMap.intents.length <= currentIntentInd) {
     await switchToForm();
     return;
@@ -422,7 +418,6 @@ if (widgetContainer) {
   let decorationsEnabled = false;
   widgetContainer.addEventListener('click', async (e) => {
     decorationsEnabled = !decorationsEnabled;
-    console.log(decorationsEnabled);
     currentWindow.setSize(new tauriWindow.LogicalSize(300, decorationsEnabled ? 120 : 70));
     currentWindow.setDecorations(decorationsEnabled);
   })
