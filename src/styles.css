@@ -19,6 +19,11 @@
   --color-background-2: rgba(36, 123, 160, 1);
   --color-background-3: rgba(36, 123, 160, 1);
 
+  --container-padding-top: 10vh;
+  --container-h1-margin-bottom: 36px;
+  --form-gap: 10px;
+  --multitask-container-display: none;
+
   color: var(--color-text);
   text-shadow: 1px 1px 2px var(--color-shadow);
   background: linear-gradient(
@@ -31,7 +36,7 @@
 
 .container {
   margin: 0;
-  padding-top: 10vh;
+  padding-top: var(--container-padding-top);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -41,7 +46,7 @@
 
 h1 {
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: var(--container-h1-margin-bottom);
 }
 
 input,
@@ -111,7 +116,7 @@ button {
   display: flex;
   flex-direction: column;
   text-align: start;
-  gap: 10px;
+  gap: var(--form-gap);
   width: 100%;
   max-width: 300px;
 }
@@ -119,6 +124,25 @@ button {
 #intention-label, #time-label, #submit-button {
   margin-top: 10px;
   margin-bottom: 0;
+}
+
+#submit-button, input {
+  padding: var(--submit-button-padding);
+}
+
+#start-button {
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+#start-button:disabled {
+  background-color: gray;
+  cursor: default;
+}
+
+#start-button:disabled:hover {
+  border: 1px solid transparent;
 }
 
 #time-input {
@@ -217,7 +241,7 @@ circle {
   margin-right: 12px;
 }
 
-#snooze-button {
+#snooze-button, #next-button {
   display: none;
   box-shadow: none;
 }
@@ -289,4 +313,33 @@ input.radio {
 
 #about p a {
   color: var(--color-button)
+}
+
+#multitask-container {
+  display: var(--multitask-container-display);
+  width: 100%;
+  max-width: 300px;
+  padding: 0 10px;
+  margin: 10px;
+  margin-top: 15px;
+}
+
+.intent-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-background-3);
+  cursor: pointer;
+  text-align: left;
+}
+
+.intent-row:hover {
+  background-color: #0f0f0f33;
+}
+
+.intent-row-time {
+  min-width: 60px;
+  text-align: right;
 }

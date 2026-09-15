@@ -1,5 +1,54 @@
-use tauri::Manager;
 use tauri_plugin_positioner::{Position, WindowExt};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    AppHandle, Manager, Runtime,
+};
+
+pub fn tray_init<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    let toggle = MenuItem::with_id(app, "toggle", "Show/Hide App", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&toggle, &quit])?;
+
+    TrayIconBuilder::with_id("intention-app-tray")
+        .icon(app.default_window_icon().unwrap().clone())
+        .tooltip("Toggle Intention App")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "toggle" => toggle_visibility(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                toggle_visibility(tray.app_handle());
+            }
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
+fn toggle_visibility<R: Runtime>(app: &AppHandle<R>) {
+    let Some(win) = app.get_webview_window("main") else { return };
+
+    let visible = win.is_visible().unwrap_or(false);
+    let minimized = win.is_minimized().unwrap_or(false);
+
+    if visible && !minimized {
+        let _ = win.hide();
+    } else {
+        let _ = win.show();
+        let _ = win.unminimize();
+        let _ = win.set_focus();
+    }
+}
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -13,6 +62,7 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .setup(|app| {
+            tray_init(app.handle())?;
             let win = app.get_webview_window("main").unwrap();
             let _ = win.as_ref().window().move_window(Position::BottomRight);
             Ok(())

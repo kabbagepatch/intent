@@ -5,52 +5,19 @@ const { defaultWindowIcon } = window.__TAURI__.app;
 const tauriWindow = window.__TAURI__.window;
 const currentWindow = tauriWindow.getCurrentWindow();
 async function reposition() {
-  const monitor = await tauriWindow.currentMonitor();
+  const monitors = await tauriWindow.availableMonitors();
+  let monitor = monitors[0];
+  if (!monitor) monitor = await tauriWindow.currentMonitor();
   if (monitor) {
+    const workAreaPosition = monitor.workArea.position;
     const workAreaSize = monitor.workArea.size;
     const windowSize = await currentWindow.outerSize();
-    const x = workAreaSize.width - windowSize.width;
-    const y = workAreaSize.height - windowSize.height;
+    const x = workAreaPosition.x + workAreaSize.width - windowSize.width;
+    const y = workAreaPosition.y + workAreaSize.height - windowSize.height;
     await currentWindow.setPosition(new tauriWindow.PhysicalPosition(x, y));
   }
 }
 reposition();
-
-/* Tray Icon Setup */
-const { TrayIcon } = window.__TAURI__.tray;
-const { Menu, MenuItem } = window.__TAURI__.menu;
-const TRAY_ID = 'intention-app-tray';
-async function toggleAppVisibility() {
-  const isVisible = await currentWindow.isVisible();
-  if (isVisible) {
-    await currentWindow.hide();
-  } else {
-    await currentWindow.show();
-    await currentWindow.unminimize();
-    await currentWindow.setFocus();
-  }
-}
-async function setupTray() {
-  try { await TrayIcon.removeById(TRAY_ID); } catch(e){}
-  const toggleItem = await MenuItem.new({ id: 'toggle', text: 'Show/Hide App', action: toggleAppVisibility });
-  const quitItem = await MenuItem.new({ id: 'quit', text: 'Quit', action: currentWindow.close });
-  const menu = await Menu.new({ items: [toggleItem, quitItem] });
-
-  const trayOptions = {
-    id: TRAY_ID,
-    icon: await defaultWindowIcon(),
-    menu,
-    tooltip: 'Toggle Intention App',
-    menuOnLeftClick: false,
-    action: async (event) => {
-      if (event.type === 'Click' && event.button === 'Left') {
-        await toggleAppVisibility()
-      }
-    }
-  };
-
-  await TrayIcon.new(trayOptions);
-}
 
 /* Notification Request */
 const tauriNotification = window.__TAURI__.notification;
@@ -76,12 +43,19 @@ const populateStoreMap = async () => {
       tauriStore.set(`${s}_setting`, 'enable');
     }
   });
+  if (!storeMap.multitask_setting) {
+    storeMap.multitask_setting = 'disable';
+    tauriStore.set('multitask_setting', 'disable');
+  }
   if (!storeMap.snooze_duration) {
-    storeMap['snooze_duration'] = 5;
+    storeMap.snooze_duration = 5;
     tauriStore.set('snooze_duration', 5);
   }
+  if (!storeMap.intents) storeMap.intents = [];
+  if (!storeMap.intentIndex) storeMap.intentIndex = 0;
   tauriStore.save();
 }
+let currentIntentInd = 0;
 
 /* App Autostart settings */
 const tauriAutostart = window.__TAURI__.autostart;
@@ -120,7 +94,7 @@ const themes = {
     'color-background-2': 'hsl(339, 60%, 46%)',
     'color-background-3': 'hsl(246, 100%, 18%)',
     'color-text': 'hsl(0, 0%, 96%)',
-    'color-icon-button': 'hsl(246, 100%, 18%)',
+    'color-icon-button': 'hsl(0, 0%, 96%)',
     'color-button': 'hsl(246, 100%, 18%)',
     'color-button-text': 'hsl(0, 0%, 96%)',
   },
@@ -135,12 +109,12 @@ const themes = {
   },
 }
 
-const stars = document.getElementById("stars");
+const stars = document.getElementById('stars');
 function createStars() {
 	for (let i = 0; i < 50; i++) {
 		let x = Math.floor(Math.random() * 96 + 2);
 		let y = Math.floor(Math.random() * 80 + 1);
-		const starPoint = document.createElement("div");
+		const starPoint = document.createElement('div');
 		starPoint.style.left = `${x}%`;
 		starPoint.style.top = `${y}%`;
 		stars.appendChild(starPoint);
@@ -177,8 +151,9 @@ const setTheme = () => {
   const settingsSvg = document.getElementById('settings-icon');
   const backSvg = document.getElementById('back-icon');
   const snoozeSvg = document.getElementById('snooze-icon');
+  const nextSvg = document.getElementById('next-icon');
   const aboutSvg = document.getElementById('about-icon');
-  [settingsSvg, backSvg, snoozeSvg, aboutSvg].forEach((icon) => {
+  [settingsSvg, backSvg, snoozeSvg, aboutSvg, nextSvg].forEach((icon) => {
     if (icon) {
       icon.style.fill = vars['color-icon-button'];
     }
@@ -195,9 +170,8 @@ const setTheme = () => {
 
 setTheme();
 await populateStoreMap();
-toggleAutostart(storeMap['autostart_setting'] === 'enable');
+toggleAutostart(storeMap.autostart_setting === 'enable');
 requestNotifications();
-setupTray();
 
 /* Form Preset */
 const setPresets = async(isWidget = false) => {
@@ -207,11 +181,17 @@ const setPresets = async(isWidget = false) => {
   
   const h = Math.max(Math.floor(remainingTime / 3600000), 0);
   const m = Math.max(Math.floor((remainingTime % 3600000) / 60000), 0);
+  const s = Math.max(Math.floor((remainingTime % 60000) / 1000), 0);
   if (isWidget) {
     document.getElementById('widget-title').textContent = intention;
-    document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
-    document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
-  } else {
+    if (h === 0 && m === 0) {
+      document.getElementById('timer-hours').textContent = String(m).padStart(2, '0');
+      document.getElementById('timer-minutes').textContent = String(s).padStart(2, '0');
+    } else {
+      document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
+      document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
+    }
+  } else if (storeMap.multitask_setting === 'disable') {
     if (remainingTime > 0) {
       if (intention) document.getElementById('intention-input').value = intention;
       document.getElementById('hours-input').value = h;
@@ -234,36 +214,132 @@ const switchMode = async (mode='FORM', x=400, y=500) => {
   await reposition();
 }
 
+const removeIntentRow = (i) => {
+  document.getElementById(`intent-${i}`).remove();
+  const mapIndex = storeMap.intents.findIndex(intent => intent.index === i);
+  console.log('before', storeMap.intents);
+  storeMap.intents.splice(mapIndex, 1);
+  console.log('after', storeMap.intents);
+  tauriStore.set('intents', storeMap.intents);
+  tauriStore.save();
+
+  if (storeMap.intents.length === 0) {
+    document.getElementById('start-button').disabled = true;
+  }
+}
+
+const addIntent = (data) => {
+  const index = storeMap.intentIndex;
+  storeMap.intents.push({ index, ...data });
+  storeMap.intentIndex += 1;
+  console.log(storeMap.intents);
+  tauriStore.set('intents', storeMap.intents);
+  tauriStore.set('intentIndex', storeMap.intentIndex);
+  tauriStore.save();
+
+  addIntentRow(data);
+}
+
+const addIntentRow = (data) => {
+  document.getElementById('start-button').disabled = false;
+  const { index, intention, hours, minutes } = data;
+
+  const intentsContainer = document.getElementById('intents-container');
+  const containerDiv = document.createElement('div');
+  containerDiv.id = `intent-${index}`;
+  containerDiv.className = 'intent-row';
+  const intentDiv = document.createElement('div');
+  intentDiv.textContent = intention;
+  const timeDiv = document.createElement('div');
+  timeDiv.textContent = `${hours || 0}h ${minutes || 0}m`;
+  timeDiv.className = 'intent-row-time'
+  containerDiv.appendChild(intentDiv);
+  containerDiv.appendChild(timeDiv);
+  containerDiv.onclick = () => {
+    console.log('remove', index);
+    removeIntentRow(index)
+  }
+  
+  intentsContainer.appendChild(containerDiv);
+}
+
+const startSession = async (data) => {
+  const { intention, hours, minutes } = data;
+  tauriStore.set('intention', intention);
+  const timeAdded = ((hours * 3600 + minutes * 60) * 1000);
+  tauriStore.set('endtime', Date.now() + timeAdded);
+  tauriStore.save();
+
+  await switchMode('WIDGET', 300, 70);
+  window.location.replace('widget.html');
+
+  if (storeMap.widget_setting !== 'enable') {
+    await currentWindow.hide()
+  }
+}
+
 const form = document.getElementById('form');
 if (form) {
-  setPresets();
-  form.addEventListener('submit', async (e) => {
+  let vars;
+  if (storeMap.multitask_setting === 'enable') {
+    storeMap.intents.forEach(addIntentRow);
+    vars = {
+      'container-padding-top': '2vh',
+      'container-h1-margin-bottom': '16px',
+      'form-gap': '0px',
+      'multitask-container-display': 'block',
+      'submit-button-padding': '0.4em 0.6em'
+    }
+    document.getElementById('submit-button').textContent = 'Add';
+    document.getElementById('start-button').addEventListener('click', () => {
+      currentIntentInd = 0;
+      startSession(storeMap.intents[currentIntentInd]);
+    });
+    if (!storeMap.intents.length) {
+      document.getElementById('start-button').disabled = true;
+    }
+  } else {
+    vars = {
+      'container-padding-top': '10vh',
+      'container-h1-margin-bottom': '36px',
+      'form-gap': '10px',
+      'multitask-container-display': 'none',
+      'submit-button-padding': '0.6em 0.8em'
+    }
+    document.getElementById('submit-button').textContent = 'Start';
+  }
+
+  const root = document.documentElement;
+  Object.entries(vars).forEach(([key, value]) => {
+    if (value) {
+      root.style.setProperty(`--${key}`, value);
+    }
+  });
+
+  await setPresets();
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const formProps = Object.fromEntries(formData);
-    tauriStore.set('intention', formProps.intention);
-    const timeAdded = ((formProps.hours * 3600 + formProps.minutes * 60) * 1000);
-    tauriStore.set('endtime', Date.now() + timeAdded);
-    tauriStore.save();
-
-    await switchMode('WIDGET', 300, 70);
-    window.location.replace("widget.html");
-
-    if (storeMap['widget_setting'] !== 'enable') {
-      await currentWindow.hide()
+    if (storeMap.multitask_setting === 'enable') {
+      addIntent(formProps);
+    } else {
+      startSession(formProps);
     }
+    form.reset();
   });
 }
 
-const switchToForm = async () => {
+const switchToForm = async (e) => {
+  if (e) e.stopPropagation();
   await switchMode('FORM');
-  window.location.replace("index.html");
+  window.location.replace('index.html');
 }
 
 const startTimer = async (endTime) => {
-  const audioEnabled = storeMap['audio_setting'] === 'enable';
-  const notifEnabled = storeMap['notif_setting'] === 'enable';
-  const widgetEnabled = storeMap['widget_setting'] === 'enable';
+  const audioEnabled = storeMap.audio_setting === 'enable';
+  const notifEnabled = storeMap.notif_setting === 'enable';
+  const widgetEnabled = storeMap.widget_setting === 'enable';
   const progressCircle = document.getElementById('progress-circle');
   const radius = progressCircle.r.baseVal.value;
   const circumference = 2 * Math.PI * radius;
@@ -282,8 +358,13 @@ const startTimer = async (endTime) => {
     const timeFraction = timeLeft / totalRemainingTime;
     const offset = circumference * (1 - timeFraction);
     progressCircle.style.strokeDashoffset = offset;
-    document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
-    document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
+    if (h === 0 && m === 0) {
+      document.getElementById('timer-hours').textContent = String(m).padStart(2, '0');
+      document.getElementById('timer-minutes').textContent = String(s).padStart(2, '0');
+    } else {
+      document.getElementById('timer-hours').textContent = String(h).padStart(2, '0');
+      document.getElementById('timer-minutes').textContent = String(m).padStart(2, '0');
+    }
     if (h === 0 && m === 0 && s === 0) {
       clearInterval(interval);
       if (audioEnabled) await new Audio('./assets/chime.mp3').play();
@@ -293,28 +374,61 @@ const startTimer = async (endTime) => {
       })
       if (!widgetEnabled) await currentWindow.show()
       progressCircle.style.strokeDashoffset = circumference;
-      document.getElementById('snooze-button').style.display = 'block';
+      if (storeMap.multitask_setting === 'enable') {
+        document.getElementById('next-button').style.display = 'block';
+      } else {
+        document.getElementById('snooze-button').style.display = 'block';
+      }
       document.getElementById('timer-text').style.display = 'none';
     }
   }, 1000);
 }
 
-const snooze = () => {
-  const snoozeTime = storeMap['snooze_duration'];
+const snooze = (e) => {
+  e.stopPropagation();
+  const snoozeTime = storeMap.snooze_duration;
   document.getElementById('snooze-button').style.display = 'none';
   document.getElementById('timer-text').style.display = 'block';
   document.getElementById('timer-hours').textContent = String(0).padStart(2, '0');
   document.getElementById('timer-minutes').textContent = String(snoozeTime).padStart(2, '0');
   startTimer(Date.now() + (snoozeTime * 60 * 1000));
-  if (storeMap['widget_setting'] !== 'enable') {
+  if (storeMap.widget_setting !== 'enable') {
     currentWindow.hide()
   }
 }
 
-const widgetContainer = document.getElementsByClassName('widget-container');
-if (widgetContainer.length) {
+const next = async (e) => {
+  e.stopPropagation();
+  currentIntentInd += 1;
+  console.log(storeMap.intents.length, currentIntentInd);
+  if (storeMap.intents.length <= currentIntentInd) {
+    await switchToForm();
+    return;
+  }
+  const currentIntent = storeMap.intents[currentIntentInd];
+  document.getElementById('next-button').style.display = 'none';
+  document.getElementById('timer-text').style.display = 'block';
+  document.getElementById('widget-title').textContent = String(currentIntent.intention).padStart(2, '0');
+  document.getElementById('timer-hours').textContent = String(currentIntent.hours).padStart(2, '0');
+  document.getElementById('timer-minutes').textContent = String(currentIntent.minutes).padStart(2, '0');
+  startTimer(Date.now() + ((currentIntent.hours * 3600 + currentIntent.minutes * 60) * 1000));
+  if (storeMap.widget_setting !== 'enable') {
+    currentWindow.hide()
+  }
+}
+
+const widgetContainer = document.getElementById('widget-container');
+if (widgetContainer) {
+  let decorationsEnabled = false;
+  widgetContainer.addEventListener('click', async (e) => {
+    decorationsEnabled = !decorationsEnabled;
+    console.log(decorationsEnabled);
+    currentWindow.setSize(new tauriWindow.LogicalSize(300, decorationsEnabled ? 120 : 70));
+    currentWindow.setDecorations(decorationsEnabled);
+  })
   setPresets(true);
   document.getElementById('snooze-button').addEventListener('click', snooze);
+  document.getElementById('next-button').addEventListener('click', next);
 
   const endTime = await tauriStore.get('endtime');
   startTimer(endTime);
@@ -328,14 +442,14 @@ if (backButton) {
 const aboutButton = document.getElementById('about-button');
 if (aboutButton) {
   aboutButton.addEventListener('click', () => {
-    window.location.replace("about.html");
+    window.location.replace('about.html');
   });
 }
 
 const settingsButton = document.getElementById('settings-button');
 if (settingsButton) {
   settingsButton.addEventListener('click', () => {
-    window.location.replace("settings.html");
+    window.location.replace('settings.html');
   });
 }
 
@@ -364,6 +478,10 @@ if (settings) {
       const settingKey = `${event.target.name}_setting`;
       const settingValue = event.target.value;
       tauriStore.set(settingKey, settingValue);
+      if (settingKey === 'multitask_setting' && settingValue === 'disable') {
+        tauriStore.set('intents', []);
+        tauriStore.set('intentIndex', 0);
+      }
       tauriStore.save();
 
       if (event.target.name === 'autostart') toggleAutostart(settingValue === 'enable');
@@ -371,10 +489,10 @@ if (settings) {
   });
 
   const snoozeInput = document.getElementById('snooze-time');
-  snoozeInput.value = storeMap['snooze_duration'];
+  snoozeInput.value = storeMap.snooze_duration;
   snoozeInput.addEventListener('input', async (event) => {
     const snoozeValue = parseInt(event.target.value, 10);
-    storeMap['snooze_duration'] = snoozeValue;
+    storeMap.snooze_duration = snoozeValue;
     tauriStore.set('snooze_duration', snoozeValue);
     tauriStore.save();
   })

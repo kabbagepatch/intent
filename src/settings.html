@@ -13,14 +13,21 @@
       <h1>Settings</h1>
       <div class="settings-options">
         <div class="settings-option">
-          <p>Select timer mode</p>
+          <p>App mode</p>
+          <input class="radio" type="radio" name="multitask" id="multitask_disable" value="disable">
+          <label for="html">Single Intent</label>
+          <input class="radio" type="radio" name="multitask" id="multitask_enable" value="enable">
+          <label for="css">Multiple Intents</label>
+        </div>
+        <div class="settings-option">
+          <p>Timer mode</p>
           <input class="radio" type="radio" name="widget" id="widget_enable" value="enable">
           <label for="html">Widget</label>
           <input class="radio" type="radio" name="widget" id="widget_disable" value="disable">
           <label for="css">Tray</label>
         </div>
         <div class="settings-option">
-          <p>Play chime</p>
+          <p>Play chime on timeup</p>
           <input class="radio" type="radio" name="audio" id="audio_enable" value="enable">
           <label for="html">Yes</label>
           <input class="radio" type="radio" name="audio" id="audio_disable" value="disable">
