@@ -15,6 +15,6 @@ Built using Tauri and vanilla HTML and JavaScript
 
 <img width="402" height="532" alt="image" src="https://github.com/user-attachments/assets/4c0ddf94-b0ad-48b0-a295-6207d76696d7" />
 
-<img width="402" height="532" alt="image" src="https://github.com/user-attachments/assets/5d312688-d4f6-4ab2-91f4-68602cc7079a" />
+<img width="402" height="532" alt="image" src="https://github.com/user-attachments/assets/2b0a0138-0f4b-4a7d-a611-c17eec3eef25" />
 
 <img width="316" height="79" alt="image" src="https://github.com/user-attachments/assets/07609bfe-a8c2-41ba-893d-698e1cd25e64" />
